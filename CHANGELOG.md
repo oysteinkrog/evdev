@@ -4,6 +4,8 @@
 [6aed780...HEAD](https://github.com/emberian/evdev/compare/7cbae16...HEAD)
 
 ### Added
+- `VirtualDeviceBuilder::from_fd(OwnedFd)`: build a virtual device on a uinput fd the
+  caller opened, for example write-only, so a `/dev/uinput` without read access works.
 
 ### Changed
 

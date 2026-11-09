@@ -41,12 +41,24 @@ impl<'a> VirtualDeviceBuilder<'a> {
             .write(true)
             .open(UINPUT_PATH)?;
 
-        Ok(VirtualDeviceBuilder {
-            fd: fd.into(),
+        Ok(VirtualDeviceBuilder::from_fd(fd.into()))
+    }
+
+    /// A builder on a uinput file descriptor the caller opened.
+    ///
+    /// [`VirtualDevice::builder()`] opens `/dev/uinput` for reading and writing. Creating
+    /// a device and emitting events through it needs only write access, so a caller
+    /// that wants to work with a write-only `/dev/uinput` (the mode 0620 that dotool's
+    /// udev rule sets, for example) can open it with `O_WRONLY` and pass the fd here.
+    /// Reading from the device ([`VirtualDevice::fetch_events`], force feedback) needs
+    /// read access as well.
+    pub fn from_fd(fd: OwnedFd) -> Self {
+        VirtualDeviceBuilder {
+            fd,
             name: Default::default(),
             id: None,
             ff_effects_max: 0,
-        })
+        }
     }
 
     /// Set the display name of this device.
@@ -646,3 +658,24 @@ mod tokio_stream {
 }
 #[cfg(feature = "tokio")]
 pub use tokio_stream::VirtualEventStream;
+
+#[cfg(test)]
+mod from_fd_tests {
+    use super::*;
+
+    /// `from_fd` uses the fd it is given and opens nothing itself: on a file that is
+    /// not uinput, the setup ioctl fails and `build` returns that error.
+    #[test]
+    fn build_uses_the_given_fd() {
+        let fd: OwnedFd = fs::OpenOptions::new()
+            .write(true)
+            .open("/dev/null")
+            .unwrap()
+            .into();
+        let err = VirtualDeviceBuilder::from_fd(fd)
+            .name("from-fd-test")
+            .build()
+            .unwrap_err();
+        assert_eq!(err.raw_os_error(), Some(libc::ENOTTY), "{err}");
+    }
+}
