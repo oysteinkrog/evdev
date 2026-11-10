@@ -73,7 +73,9 @@ ioctl_read_buf!(eviocgsw, b'E', 0x1b, u8);
 ioctl_write_ptr!(eviocsff, b'E', 0x80, ff_effect);
 ioctl_write_int!(eviocgrab, b'E', 0x90);
 ioctl_write_int!(eviocrevoke, b'E', 0x91);
-ioctl_write_int!(eviocsclockid, b'E', 0xa0);
+// The kernel reads the clock id through a pointer (copy_from_user), so this is a
+// pointer ioctl, not an int one. The request number is the same.
+ioctl_write_ptr!(eviocsclockid, b'E', 0xa0, ::libc::c_int);
 
 const UINPUT_IOCTL_BASE: u8 = b'U';
 ioctl_write_ptr!(ui_dev_setup, UINPUT_IOCTL_BASE, 3, uinput_setup);
