@@ -389,6 +389,17 @@ impl Device {
         self.raw.is_grabbed()
     }
 
+    /// Sets the clock the kernel stamps this device's events with. See
+    /// [`RawDevice::set_clock_id`].
+    pub fn set_clock_id(&mut self, clock: libc::clockid_t) -> io::Result<()> {
+        self.raw.set_clock_id(clock)
+    }
+
+    /// The clock the kernel stamps this device's events with. See [`RawDevice::clock_id`].
+    pub fn clock_id(&self) -> libc::clockid_t {
+        self.raw.clock_id()
+    }
+
     /// Send an event to the device.
     ///
     /// Events that are typically sent to devices are

@@ -85,6 +85,8 @@ pub struct RawDevice {
     supported_snd: Option<AttributeSet<SoundCode>>,
     pub(crate) event_buf: Vec<input_event>,
     grabbed: bool,
+    /// The clock the kernel stamps this device's events with.
+    clock: libc::clockid_t,
 }
 
 impl RawDevice {
@@ -254,6 +256,7 @@ impl RawDevice {
             max_ff_effects,
             event_buf: Vec::new(),
             grabbed: false,
+            clock: libc::CLOCK_REALTIME,
         })
     }
 
@@ -665,6 +668,27 @@ impl RawDevice {
     /// Whether the device is currently grabbed for exclusive use or not.
     pub fn is_grabbed(&self) -> bool {
         self.grabbed
+    }
+
+    /// Sets the clock the kernel stamps this device's events with (`EVIOCSCLOCKID`).
+    ///
+    /// The kernel takes `libc::CLOCK_REALTIME` (its default), `libc::CLOCK_MONOTONIC` or
+    /// `libc::CLOCK_BOOTTIME`, and refuses any other id with `EINVAL`. Event timestamps
+    /// ([`InputEvent::timestamp`](crate::InputEvent::timestamp)) are then times on that
+    /// clock, given as time since `UNIX_EPOCH`. On a change of clock, if the kernel's buffer
+    /// holds events, it drops them and queues a `SYN_DROPPED`.
+    pub fn set_clock_id(&mut self, clock: libc::clockid_t) -> io::Result<()> {
+        unsafe {
+            sys::eviocsclockid(self.as_raw_fd(), &clock)?;
+        }
+        self.clock = clock;
+        Ok(())
+    }
+
+    /// The clock the kernel stamps this device's events with: `libc::CLOCK_REALTIME` unless
+    /// [`set_clock_id`](Self::set_clock_id) changed it.
+    pub fn clock_id(&self) -> libc::clockid_t {
+        self.clock
     }
 
     /// Send an event to the device.
