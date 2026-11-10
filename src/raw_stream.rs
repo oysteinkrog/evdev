@@ -691,6 +691,17 @@ impl RawDevice {
         self.clock
     }
 
+    /// Now on this device's event clock, in the form event timestamps take.
+    pub(crate) fn now(&self) -> std::time::SystemTime {
+        let mut ts = libc::timespec {
+            tv_sec: 0,
+            tv_nsec: 0,
+        };
+        // The clock was accepted by the kernel for this device, so clock_gettime takes it.
+        unsafe { libc::clock_gettime(self.clock, &mut ts) };
+        std::time::UNIX_EPOCH + std::time::Duration::new(ts.tv_sec as u64, ts.tv_nsec as u32)
+    }
+
     /// Send an event to the device.
     ///
     /// Events that are typically sent to devices are

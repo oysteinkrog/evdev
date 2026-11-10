@@ -326,7 +326,9 @@ impl Device {
         let block_dropped = std::mem::take(&mut self.block_dropped);
         let sync = if block_dropped {
             self.prev_state.clone_from(&self.state);
-            let now = SystemTime::now();
+            // On the device's own event clock, so the made-up events line up with the
+            // kernel's.
+            let now = self.raw.now();
             self.sync_state(now)?;
             Some(SyncState::KeyTypes {
                 time: crate::systime_to_timeval(&now),
@@ -390,7 +392,8 @@ impl Device {
     }
 
     /// Sets the clock the kernel stamps this device's events with. See
-    /// [`RawDevice::set_clock_id`].
+    /// [`RawDevice::set_clock_id`]. The events made up after a `SYN_DROPPED` take their
+    /// time from the same clock.
     pub fn set_clock_id(&mut self, clock: libc::clockid_t) -> io::Result<()> {
         self.raw.set_clock_id(clock)
     }
